@@ -1,0 +1,15 @@
+ifdef OS # Windows
+    PLATFORM := Windows
+else # POSIX
+    CP := cp
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux) # Linux
+        PLATFORM := Linux
+    else ifeq ($(UNAME_S),Darwin) # macOS
+        PLATFORM := macOS
+        # Mac architectures: arm64 (Apple M series) or x86_64 (intel)
+        MAC_ARCH := $(shell uname -m)
+    else # Unsupported
+        $(error "Current platform not supported")
+    endif
+endif

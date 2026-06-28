@@ -1,0 +1,40 @@
+include ../make/makefile.common
+
+include ../DBDVER/makefile          # Include DBDVER sources if required
+
+TARGET_PDB := $(shell git rev-parse HEAD).pdb
+
+$(TARGET): $(OBJECTS) $(SOURCES) 
+ifdef OS # Windows - IX-2968 $(OBJECTS) is too long to be passed directly into the LINK command. Serialize its contents to a file and use that file when linking instead.
+	@for %%i in ($(OBJECTS)) do @echo %%i >> objectFiles.txt 
+	LINK /nologo @objectFiles.txt /DEBUG:FULL $(LIB_LDFLAGS) $(DEFAULT_LDFLAGS) /PDB:$(TARGET_PDB) /PDBALTPATH:$(TARGET_PDB) /out:$@
+	del objectFiles.txt
+else
+	$(CC) $(OBJECTS)  $(LIB_LDFLAGS) $(DEFAULT_LDFLAGS) -o $@
+endif
+
+info:
+	echo "Making: " $(TARGET)
+	@echo CC      = $(CC)
+	@echo SEARCH  = $(SEARCH)
+	@echo SOURCES = $(SOURCES)
+	@echo OBJECTS = $(OBJECTS)
+	@echo DEPENDS = $(DEPENDS)
+	@echo SSLFOUND = $(SSLFOUND)
+	@echo LIB_LDFLAGS = $(LIB_LDFLAGS)
+	@echo CXXFLAGS = $(CXXFLAGS)
+	@echo SSLSEARCH = $(SSLSEARCH)
+	@echo PLATFORM = $(PLATFORM)
+
+all: $(TARGET)
+
+# Use double colon rule for clean so regular makefiles can perform addition cleaning. See Iguana makefile for example
+# https://www.gnu.org/software/make/manual/html_node/Double_002dColon.html
+clean::
+ifdef OS # Windows
+	cd ../ && git clean -dfx
+else
+	-$(RM) $(RMLIST)
+endif
+
+-include $(DEPENDS)

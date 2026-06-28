@@ -1,0 +1,20 @@
+include ../make/makefile.common
+
+$(TARGET): $(OBJECTS)
+
+# Include generated dependency files
+-include $(DEPENDS)
+
+info:
+	@echo "Making library $(lastword $(subst /, ,$(CURDIR))):"
+	@echo CC      = $(CC)
+	@echo SOURCES = $(SOURCES)
+	@echo OBJECTS = $(OBJECTS)
+	@echo DEPENDS = $(DEPENDS)
+
+all: $(TARGET)
+
+# Use double colon rule for clean so regular makefiles can perform addition cleaning. See Iguana makefile for example
+# https://www.gnu.org/software/make/manual/html_node/Double_002dColon.html
+clean::
+	-$(RM) $(RMLIST)
