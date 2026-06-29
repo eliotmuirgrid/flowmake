@@ -1,43 +1,49 @@
 # Wildcard matching to figure out where sources are based on the DIRS variable
-OBJEXT :=.o
-LIBEXT :=a
+OBJEXT  := .o
+LIBEXT  := a
 
-SEARCH  := $(foreach dir, $(DIRS),../$(dir)/*.cpp ../$(dir)/*.c) *.c
+# Safely expand search paths
+SEARCH  := $(foreach dir, $(DIRS), ../$(dir)/*.cpp ../$(dir)/*.c) *.c
 SOURCES := $(wildcard $(SEARCH))
-OBJECTS := $(subst .c,$(OBJEXT), $(SOURCES))
-DEPENDS := $(subst $(OBJEXT),.d, $(OBJECTS))
+
+# Use patsubst instead of subst to prevent corrupting folder names containing ".c"
+OBJECTS := $(patsubst %.c, %$(OBJEXT), $(SOURCES))
+DEPENDS := $(patsubst %$(OBJEXT), %.o.d, $(OBJECTS))
 
 OBJECTS := $(OBJECTS) $(OBJECTS_EXTRA)
 
-# If a target is not define, default to test
-TARGET ?= test
+# If a target is not defined, default to test.com
+TARGET  ?= test.com
 
-CFLAGS   := -MMD -I../ 
-CCACHE   := $(shell command -v ccache  2> /dev/null)
-ifdef CCACHE
-   CC  := ccache $(CC)
-endif
+CFLAGS  := -MMD -MP -I../ 
+CC      := ccache $(FLOW_TOOL_COSMOPOLITAN)/bin/cosmocc  
 
-# Define our clean rule - we try to use the native DEL under windows
-RMLIST   := $(foreach dir, $(DIRS),../$(dir)/*.o ../$(dir)/*.d) *.d *.o *~ $(TARGET)
+# Define our clean list
+RMLIST  := $(foreach dir, $(DIRS), ../$(dir)/*.o ../$(dir)/*.d) *.d *.o *~ *.elf *.dbg $(TARGET)
 
-$(TARGET): $(OBJECTS) $(SOURCES) 
+.PHONY: all info clean
+
+all: $(TARGET)
+
+# FIXED: Removed $(SOURCES) from this line to stop infinite relinking
+$(TARGET): $(OBJECTS) 
 	$(CC) $(OBJECTS) -o $@
 
+# ADDED: Explicit rule to compile C files using cosmocc and CFLAGS
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 info:
-	echo "Making: " $(TARGET)
+	@echo "Making: " $(TARGET)
 	@echo CC      = $(CC)
 	@echo SEARCH  = $(SEARCH)
 	@echo SOURCES = $(SOURCES)
 	@echo OBJECTS = $(OBJECTS)
 	@echo DEPENDS = $(DEPENDS)
-	@echo CXXFLAGS = $(CXXFLAGS)
-	@echo PLATFORM = $(PLATFORM)
 
-all: $(TARGET)
-
-# Use double colon rule for clean so regular makefiles can perform addition cleaning. 
+# Use double colon rule for clean so regular makefiles can perform additional cleaning. 
 clean::
 	-$(RM) $(RMLIST)
 
 -include $(DEPENDS)
+
